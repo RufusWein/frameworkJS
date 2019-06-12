@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta>
+    <style>
+        etiqueta {
+            background: red;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Hola mundo</h1>
+    <etiqueta></etiqueta>
+    <etiqueta></etiqueta>
+</body>
+<script>
+    // class Componente {
+    //     nombre = '';
+    //     plantilla = '';
+    //     atributos = {};
+
+    //     constructor(nombre, atributos, plantilla) {
+    //         this.nombre = nombre;
+    //         this.atributos = atributos;
+    //         this.plantilla = plantilla;
+    //     }
+
+    // }
+
+    app = {
+        componentes: [{
+            "etiqueta": {
+                body: {
+                    campo1: 'soy el campo1',
+                    campo2: 'soy el campo2'
+                },
+                template: "<h1> {{ campo1 }} / {{ campo2 }} </h1>"
+            }
+        }],
+        main() {
+            this.etiqueta[0].campo1 = "Soy un frame sencillo sin mucha ambición";
+            this.etiqueta[0].click = function() {
+                alert("Hola holita");
+            };
+        }
+    }
+
+    // Herramienta
+    function buscaTag(nodo, tag, action, retorno) {
+        tag = tag.toUpperCase();
+        nodo.childNodes.forEach((item) => {
+            if (tag == item.nodeName) {
+                if (retorno) return action(item);
+                action(item);
+            }
+            buscaTag(item, tag, action);
+        });
+    }
+
+    // inicializadomos!!
+    buscaTag(document.getRootNode(), "html", function(item) {
+        app.html = item;
+    }, true);
+    // Examinamos los componentes disponibles y creamos las instancias de estos
+    app.componentes.forEach(componente => {
+        var i = 0;
+        var nombreComponente = Object.keys(componente)[0];
+        app[nombreComponente] = [];
+
+        // Instanciamos componentes
+        buscaTag(document.getRootNode(), nombreComponente, function(item) {
+            item.id = nombreComponente + i;
+            eval("app." + nombreComponente + "[" + i + "]=" + JSON.stringify(componente[nombreComponente].body));
+            i++;
+        }, false);
+    });
+    // Ejecutamos el programa
+    app.main();
+
+    // Actualizamos!! (cada segundo)
+    window.setInterval(() => {
+        /////////////////////////////////////////////////////
+        app.componentes.forEach(componente => {
+            var nombreComponente = Object.keys(componente)[0],
+                appComponente = componente[nombreComponente],
+                i = 0;
+
+            buscaTag(app.html, nombreComponente, function(item) {
+                componente = app[nombreComponente][i];
+                componente["render"] = appComponente.template;
+
+                // sustituimos los atributos por sus valores
+                Object.keys(appComponente.body).forEach(atributo => {
+                    componente.render = componente.render.replace(
+                        new RegExp("({{)+[\\s](" + atributo + ")+[\\s]+(}})", "g"), componente[atributo]);
+                });
+
+                // introducimos el render
+                let etiqueta = document.getElementById(nombreComponente + i);
+                if (etiqueta.innerHTML !== componente.render) {
+                    etiqueta.innerHTML = componente.render;
+                }
+
+                // Añadimos propiedades especiales como eventos ...
+                var elementoDom = document.getElementById(item.id);
+                elementoDom.parentNode.replaceChild(item.cloneNode(true), item); // Eliminamos eventos
+                if (app[nombreComponente][i].click !== undefined) {
+                    document.getElementById(item.id).addEventListener("click", app[nombreComponente][i].click);
+                }
+
+                i++;
+            }, false);
+        });
+
+        // Forma no aconsejada
+        //https://developers.google.com/web/updates/2016/08/removing-document-write
+        //document.removeChild(document.documentElement);
+        //document.open();
+        //document.write(app.render); //"<h1>Hello World " + Date.now() + "</h1>");
+        //document.close();
+    }, 1000);
+</script>
+
+</html>
